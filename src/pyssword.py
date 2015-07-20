@@ -111,7 +111,7 @@ Examples:
     The source of random information can be changed.  For using 16 bytes (that
     is, 128 bits) from /dev/random do the following:
 
-        $ dd if=/dev/random bs=16 count=1 2>/dev/null | od -t u1 -A n -w1 | pyssword --stdin
+        $ dd if=/dev/random bs=16 count=1 2>/dev/null | od -t u1 -A n -v | pyssword --stdin
         )PN"GgyF%`#TdlI3IweV
 
     Using a real dice with six sides for generating a 26-bit passphrase:
