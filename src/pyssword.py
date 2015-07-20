@@ -8054,14 +8054,25 @@ class Passphrase(Password):
 
     @property
     def compacted(self):
-        pw = []
-        for i, token in enumerate(self.value[:-1]):
-            pw.append(token)
-            next_token = self.value[i + 1]
-            if (token + next_token) in self.set:
-                pw.append(' ')
-        pw.append(self.value[-1])
-        return ''.join(pw)
+        if not self.value:
+            return ''
+
+        chunks = []
+        current = [self.value[0]]
+        for i in range(1, len(self.value)):
+            token = ''.join(current)
+            next_token = self.value[i]
+
+            for i in range(len(current), 0, -1):
+                if (''.join(current[-i:]) + next_token) in self.set:
+                    chunks.append(current)
+                    current = [next_token]
+                    break
+            else:
+                current.append(next_token)
+
+        chunks.append(current)
+        return ' '.join(''.join(chunk) for chunk in chunks)
 
 
 def error(message):
