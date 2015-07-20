@@ -8146,8 +8146,8 @@ def source(*inputs):
 
 
 def main():
-    sys.exit(run(docopt.docopt(__doc__)))
+    return run(docopt.docopt(__doc__))
 
 
 if __name__ == '__main__':
-    main()
+    sys.exit(main())
