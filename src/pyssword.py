@@ -40,9 +40,7 @@ Options:
 
     --info
         Print the final entropy and number of items (characters or words) in
-        the set used, along with the password.  The entropy, the number of
-        items and the password are separated by a space character.  Entropy
-        comes first, then number of items, then the password.
+        the set used, along with the password.
 
     --stdin
         Ask for random information instead of relying on /dev/urandom.  Numbers
@@ -104,7 +102,9 @@ Examples:
     this:
 
         $ pyssword --info --entropy 30
-        32.8 94 h+!:4
+        Entropy: 32.772944258388186
+        Set length: 94
+        Password: h+!:4
 
     The full character set has 94 letters/numbers/symbols.
 
@@ -118,7 +118,10 @@ Examples:
 
         $ pyssword passphrase --stdin --radix 6 --one-based --entropy 26 --info
          1/11: 1 2 3 4 5 6 1 2 3 4 5
-        28.4 7776 a drums april
+        Entropy: 28.434587507932722
+        Set length: 7776
+        Compacted: adrumsapril
+        Password: a drums april
 
     The same as above, using a pipe and without info:
 
@@ -8113,12 +8116,17 @@ def run(args):
         sep = ''
 
     if args['--info']:
-        print("%.1f %d %s" % (pw.entropy, len(pw.set), sep.join(pw)))
+        print("Entropy: {}\n"
+              "Set length: {}"
+              "".format(pw.entropy, len(pw.set)))
+
+        if is_passphrase:
+            print("Compacted: {}".format(pw.compacted))
+
+        print("Password: {}".format(sep.join(pw)))
+
     else:
         print(sep.join(pw))
-
-    if is_passphrase:
-        print("Compacted: {}".format(pw.compacted))
 
 
 def random_generator(rng, radix):
