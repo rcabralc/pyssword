@@ -7959,7 +7959,7 @@ class IntOption:
         return self
 
 
-class CharSet:
+class TokenSet:
     def __init__(self, tokens):
         self._tokens = tokens
         self._length = len(tokens)
@@ -7999,12 +7999,23 @@ class CharSet:
         return reversed(digits)
 
 
+class CharSet(TokenSet):
+    def __init__(self, tokens):
+        super(CharSet, self).__init__(tokens)
+
+        if self._length < 2:
+            error("Not enough characters to choose from.  Use a longer set.")
+
+
 class WordSet(CharSet):
-    def restrict(self, minlength):
-        return (
-            minlength + 1,
-            self.__class__([w for w in self._tokens if len(w) >= minlength])
-        )
+    def __init__(self, tokens):
+        super(WordSet, self).__init__(tokens)
+
+        if self._length < 2:
+            error("Not enough words to choose from.  Use a longer set.")
+
+    def restrict(self, other_set):
+        return self.__class__([w for w in self._tokens if w not in other_set])
 
 
 class Password:
@@ -8019,6 +8030,9 @@ class Password:
 
     def __iter__(self):
         return iter(self.value)
+
+    def __contains__(self, token):
+        return token in self.value
 
     @property
     def loose_entropy(self):
@@ -8086,10 +8100,9 @@ def run(args):
         wordset = WordSet(tokens)
         inputs = []
         pw = Passphrase.empty()
-        minlength = 1
 
         while pw.loose_entropy < entropy:
-            minlength, wordset = wordset.restrict(minlength)
+            wordset = wordset.restrict(pw)
             pw = Passphrase(entropy, wordset, radix, source(inputs, generator))
             inputs = pw.inputs
 
