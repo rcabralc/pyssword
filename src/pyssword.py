@@ -7,10 +7,10 @@ Generates a random password with a specified entropy within specified character
 sets.  Uses /dev/urandom for random info by default.
 
 Usage:
-    pyssword [--lower --upper --numbers --symbols --entropy=bits --info]
-    pyssword --stdin [--lower --upper --numbers --symbols --entropy=bits --info --radix=radix --one-based]
-    pyssword passphrase [--entropy=bits --info]
-    pyssword passphrase --stdin [--entropy=bits --info --radix=radix --one-based]
+    pyssword [--lower --upper --numbers --symbols --entropy=bits --no-info]
+    pyssword --stdin [--lower --upper --numbers --symbols --entropy=bits --no-info --radix=radix --one-based]
+    pyssword passphrase [--entropy=bits --no-info]
+    pyssword passphrase --stdin [--entropy=bits --no-info --radix=radix --one-based]
     pyssword --help
 
 Options:
@@ -38,9 +38,8 @@ Options:
     -s --symbols
         Use symbols.
 
-    --info
-        Print the final entropy and number of items (characters or words) in
-        the set used, along with the password.
+    --no-info
+        Print only the password, without additional info.
 
     --stdin
         Ask for random information instead of relying on /dev/urandom.  Numbers
@@ -90,18 +89,17 @@ Examples:
     Without arguments, all characters are used to compute a password with the
     default entropy (lowercase, uppercase, numbers and symbols):
 
-        $ pyssword
+        $ pyssword --no-info
         &I3`?)R0h0Co0H[>k)|\\
 
     You can restrict the characters used and use a specific entropy:
 
-        $ pyssword --lower --numbers --entropy 64
+        $ pyssword --lower --numbers --entropy 64 --no-info
         azs99hrimiov0g
 
-    The actual entropy and length of the character set used can be seen like
-    this:
+    By default, that is, without --no-info, additional information is shown:
 
-        $ pyssword --info --entropy 30
+        $ pyssword --entropy 30
         Entropy: 32.772944258388186
         Set length: 94
         Password: h+!:4
@@ -111,24 +109,29 @@ Examples:
     The source of random information can be changed.  For using 16 bytes (that
     is, 128 bits) from /dev/random do the following:
 
-        $ dd if=/dev/random bs=16 count=1 2>/dev/null | od -t u1 -A n -v | pyssword --stdin
+        $ dd if=/dev/random bs=16 count=1 2>/dev/null | od -t u1 -A n -v | pyssword --stdin --no-info
         )PN"GgyF%`#TdlI3IweV
 
     Using a real dice with six sides for generating a 26-bit passphrase:
 
-        $ pyssword passphrase --stdin --radix 6 --one-based --entropy 26 --info
+        $ pyssword passphrase --stdin --radix 6 --one-based --entropy 26
          1/11: 1 2 3 4 5 6 1 2 3 4 5
         Entropy: 28.434587507932722
         Set length: 7776
         Compacted: adrumsapril
         Password: a drums april
 
+    Passphrases have the additional "Compacted" information, which is the
+    passphrase without whitespaces where possible.  The script joins words
+    which will not form another one from the same list, unlike "in" + "put" =
+    "input", which would cause a loss of entropy.
+
     The same as above, using a pipe and without info:
 
         $ cat - > /tmp/rolls
         1 2 3 4 5 6 1 2 3 4 5
         <Control-D>
-        $ cat /tmp/rolls | pyssword passphrase -e 26 --stdin --radix 6 --one-based
+        $ cat /tmp/rolls | pyssword passphrase -e 26 --stdin --radix 6 --one-based --no-info
         a drums april
         $ shred -u /tmp/secret
 
@@ -8126,7 +8129,10 @@ def run(args):
         pw = Password(entropy, charset, radix, source(generator))
         sep = ''
 
-    if args['--info']:
+    if args['--no-info']:
+        print(sep.join(pw))
+
+    else:
         print("Entropy: {}\n"
               "Set length: {}"
               "".format(pw.entropy, len(pw.set)))
@@ -8135,9 +8141,6 @@ def run(args):
             print("Compacted: {}".format(pw.compacted))
 
         print("Password: {}".format(sep.join(pw)))
-
-    else:
-        print(sep.join(pw))
 
 
 def random_generator(rng, radix):
