@@ -8060,22 +8060,49 @@ class Passphrase(Password):
         if not self.value:
             return ''
 
+        combos = Combos(self.set)
         chunks = []
         current = [self.value[0]]
         for i in range(1, len(self.value)):
-            token = ''.join(current)
             next_token = self.value[i]
 
-            for i in range(len(current), 0, -1):
-                if (''.join(current[-i:]) + next_token) in self.set:
-                    chunks.append(current)
-                    current = [next_token]
-                    break
+            if combos.contains_shorter(current + [next_token]):
+                chunks.append(current)
+                current = [next_token]
             else:
                 current.append(next_token)
 
         chunks.append(current)
         return ' '.join(''.join(chunk) for chunk in chunks)
+
+
+class Combos:
+    def __init__(self, set):
+        self.set = set
+        self.maxlength = max(len(w) for w in set)
+
+    def contains_shorter(self, target):
+        target = tuple(target)
+        for expansion in self._expansions(''.join(target), len(target)):
+            if expansion != target:
+                return True
+        return False
+
+    def _prefixes(self, target):
+        sw = target.startswith
+        return ((i, target[len(i):]) for i in self.set if sw(i))
+
+    def _expansions(self, target, thr):
+        if thr * self.maxlength < len(target):
+            return
+
+        if not target:
+            yield ()
+            return
+
+        for p, s in self._prefixes(target):
+            for expansion in self._expansions(s, thr - 1):
+                yield (p,) + expansion
 
 
 def error(message):
