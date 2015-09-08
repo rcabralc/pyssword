@@ -8187,9 +8187,7 @@ def user_generator(desired_entropy, radix, onebased):
         except:
             values = []
 
-        for value in values:
-            if 0 <= value < radix:
-                yield value
+        yield from (v for v in values if 0 <= v < radix)
 
     while True:
         if sys.stdin.isatty():
