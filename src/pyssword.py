@@ -11,6 +11,7 @@ Usage:
     pyssword --read [--lower --upper --numbers --symbols --entropy=bits --no-info --radix=radix --one-based]
     pyssword passphrase [--entropy=bits --no-info]
     pyssword passphrase --read [--entropy=bits --no-info --radix=radix --one-based]
+    pyssword passphrase --info
     pyssword --help
 
 Options:
@@ -37,6 +38,14 @@ Options:
 
     -s --symbols
         Use symbols.
+
+    --info
+        Ask for a passphrase (a white-space separated list of words of the
+        current word list) from stdin.  If connected to a terminal, the user
+        will be prompted to enter the passphrase.  Any word not in the word
+        list will cause an error.
+
+        Outputs the passphrase info, including possible compactation.
 
     --no-info
         Print only the password, without additional info.
@@ -8110,7 +8119,6 @@ def error(message):
 
 
 def run(args):
-    entropy = IntOption(args, '--entropy').greater_than(0).get()
     is_passphrase = args['passphrase']
 
     if is_passphrase:
@@ -8131,13 +8139,19 @@ def run(args):
 
     assert len(tokens) == len(set(tokens))
 
-    if args['--read']:
-        radix = IntOption(args, '--radix').greater_than(1).get()
-        generator = user_generator(entropy, radix, args['--one-based'])
-    else:
-        rng = random.SystemRandom()
+    if args['--info']:
         radix = len(tokens)
-        generator = random_generator(rng, radix)
+        generator, entropy = read_words(tokens)
+    else:
+        entropy = IntOption(args, '--entropy').greater_than(0).get()
+
+        if args['--read']:
+            radix = IntOption(args, '--radix').greater_than(1).get()
+            generator = user_generator(entropy, radix, args['--one-based'])
+        else:
+            rng = random.SystemRandom()
+            radix = len(tokens)
+            generator = random_generator(rng, radix)
 
     if is_passphrase:
         wordset = WordSet(tokens)
@@ -8198,6 +8212,21 @@ def user_generator(desired_entropy, radix, onebased):
         for value in readline(sys.stdin.readline()):
             count += 1
             yield value
+
+
+def read_words(tokens):
+    if sys.stdin.isatty():
+        print('Enter words separated by space', end=': ')
+        sys.stdout.flush()
+
+    values = []
+    for word in sys.stdin.readline().strip().split(' '):
+        try:
+            values.append(tokens.index(word))
+        except ValueError:
+            error("{} is not part of the word list.".format(word))
+
+    return (values, log(len(tokens)**len(values), 2))
 
 
 def source(*inputs):
