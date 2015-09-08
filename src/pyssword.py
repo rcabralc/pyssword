@@ -76,7 +76,7 @@ Options:
         given.  Values range from 0 up to but excluding `radix' (see
         `--one-based' for ranging values from 1 up to and including `radix').
 
-    --one-based
+    -1 --one-based
         Whether or not numbers are zero- or one- based.  They are assumed to be
         zero-based by default.
 
