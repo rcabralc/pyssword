@@ -151,7 +151,6 @@ from math import ceil, log
 
 import docopt
 import itertools
-import os
 import random
 import sys
 
