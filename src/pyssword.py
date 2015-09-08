@@ -8,9 +8,9 @@ sets.  Uses /dev/urandom for random info by default.
 
 Usage:
     pyssword [--lower --upper --numbers --symbols --entropy=bits --no-info]
-    pyssword --stdin [--lower --upper --numbers --symbols --entropy=bits --no-info --radix=radix --one-based]
+    pyssword --read [--lower --upper --numbers --symbols --entropy=bits --no-info --radix=radix --one-based]
     pyssword passphrase [--entropy=bits --no-info]
-    pyssword passphrase --stdin [--entropy=bits --no-info --radix=radix --one-based]
+    pyssword passphrase --read [--entropy=bits --no-info --radix=radix --one-based]
     pyssword --help
 
 Options:
@@ -41,7 +41,7 @@ Options:
     --no-info
         Print only the password, without additional info.
 
-    --stdin
+    -r --read
         Ask for random information instead of relying on /dev/urandom.  Numbers
         are collected from stdin until enough entropy has been achieved.  If
         connected to a terminal, the user will be prompted to manually enter
@@ -72,7 +72,7 @@ Options:
 
     --radix=radix
         [Default: 256]
-        The radix used for random input numbers.  Only used if `--stdin' is
+        The radix used for random input numbers.  Only used if `--read' is
         given.  Values range from 0 up to but excluding `radix' (see
         `--one-based' for ranging values from 1 up to and including `radix').
 
@@ -109,12 +109,12 @@ Examples:
     The source of random information can be changed.  For using 16 bytes (that
     is, 128 bits) from /dev/random do the following:
 
-        $ dd if=/dev/random bs=16 count=1 2>/dev/null | od -t u1 -A n -v | pyssword --stdin --no-info
+        $ dd if=/dev/random bs=16 count=1 2>/dev/null | od -t u1 -A n -v | pyssword --read --no-info
         )PN"GgyF%`#TdlI3IweV
 
     Using a real dice with six sides for generating a 26-bit passphrase:
 
-        $ pyssword passphrase --stdin --radix 6 --one-based --entropy 26
+        $ pyssword passphrase --read --radix 6 --one-based --entropy 26
          1/11: 1 2 3 4 5 6 1 2 3 4 5
         Entropy: 28.434587507932722
         Set length: 7776
@@ -131,7 +131,7 @@ Examples:
         $ cat - > /tmp/rolls
         1 2 3 4 5 6 1 2 3 4 5
         <Control-D>
-        $ cat /tmp/rolls | pyssword passphrase -e 26 --stdin --radix 6 --one-based --no-info
+        $ cat /tmp/rolls | pyssword passphrase -e 26 --read --radix 6 --one-based --no-info
         a drums april
         $ shred -u /tmp/secret
 
@@ -8131,7 +8131,7 @@ def run(args):
 
     assert len(tokens) == len(set(tokens))
 
-    if args['--stdin']:
+    if args['--read']:
         radix = IntOption(args, '--radix').greater_than(1).get()
         generator = user_generator(entropy, radix, args['--one-based'])
     else:
