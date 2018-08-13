@@ -45,7 +45,7 @@ Options:
         will be prompted to enter the passphrase.  Any word not in the word
         list will cause an error.
 
-        Outputs the passphrase info, including possible compactation.
+        Outputs the passphrase info.
 
     --no-info
         Print only the password, without additional info.
@@ -127,13 +127,7 @@ Examples:
          1/11: 1 2 3 4 5 6 1 2 3 4 5
         Entropy: 28.434587507932722
         Set length: 7776
-        Compacted: adrumsapril
         Password: a drums april
-
-    Passphrases have the additional "Compacted" information, which is the
-    passphrase without whitespaces where possible.  The script joins words
-    which will not form another one from the same list, unlike "in" + "put" =
-    "input", which would cause a loss of entropy.
 
     The same as above, using a pipe and without info:
 
@@ -8063,55 +8057,6 @@ class Passphrase(Password):
         pw.value = []
         return pw
 
-    @property
-    def compacted(self):
-        if not self.value:
-            return ''
-
-        combos = Combos(self.set)
-        chunks = []
-        current = [self.value[0]]
-        for i in range(1, len(self.value)):
-            next_token = self.value[i]
-
-            if combos.contains_shorter(current + [next_token]):
-                chunks.append(current)
-                current = [next_token]
-            else:
-                current.append(next_token)
-
-        chunks.append(current)
-        return ' '.join(''.join(chunk) for chunk in chunks)
-
-
-class Combos:
-    def __init__(self, set):
-        self.set = set
-        self.maxlength = max(len(w) for w in set)
-
-    def contains_shorter(self, target):
-        target = tuple(target)
-        for expansion in self._expansions(''.join(target), len(target)):
-            if expansion != target:
-                return True
-        return False
-
-    def _prefixes(self, target):
-        sw = target.startswith
-        return ((i, target[len(i):]) for i in self.set if sw(i))
-
-    def _expansions(self, target, thr):
-        if thr * self.maxlength < len(target):
-            return
-
-        if not target:
-            yield ()
-            return
-
-        for p, s in self._prefixes(target):
-            for expansion in self._expansions(s, thr - 1):
-                yield (p,) + expansion
-
 
 def error(message):
     print(message)
@@ -8171,16 +8116,11 @@ def run(args):
 
     if args['--no-info']:
         print(sep.join(pw))
-
     else:
         print("Entropy: {}\n"
-              "Set length: {}"
-              "".format(pw.entropy, len(pw.set)))
-
-        if is_passphrase:
-            print("Compacted: {}".format(pw.compacted))
-
-        print("Password: {}".format(sep.join(pw)))
+              "Set length: {}\n"
+              "Password: {}"
+              "".format(pw.entropy, len(pw.set), sep.join(pw)))
 
 
 def random_generator(rng, radix):
