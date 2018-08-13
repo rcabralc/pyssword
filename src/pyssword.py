@@ -136,7 +136,7 @@ Examples:
         <Control-D>
         $ cat /tmp/rolls | pyssword passphrase -e 26 --read --radix 6 --one-based --no-info
         a drums april
-        $ shred -u /tmp/secret
+        $ shred -u /tmp/rolls
 
     Note: the two examples above returned three words, but the resulting
     entropy is not 38.8 (each word in Dicerware list provides about 12.9 bits,
