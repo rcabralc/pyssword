@@ -236,26 +236,17 @@ class Number:
 
 
 class TokenSet(tuple):
+    def __new__(cls, tokens):
+        if len(tokens) < 2:
+            error("Not enough tokens to choose from.  Use a longer set.")
+        return tuple.__new__(cls, tokens)
+
     @property
     def bits(self):
         return log(len(self), 2)
 
     def select(self, number):
         return [self[i] for i in number.convert(len(self))]
-
-
-class CharSet(TokenSet):
-    def __new__(cls, tokens):
-        if len(tokens) < 2:
-            error("Not enough characters to choose from.  Use a longer set.")
-        return TokenSet.__new__(cls, tokens)
-
-
-class WordSet(CharSet):
-    def __new__(cls, tokens):
-        if len(tokens) < 2:
-            error("Not enough words to choose from.  Use a longer set.")
-        return CharSet.__new__(cls, tokens)
 
 
 class Password:
@@ -299,6 +290,7 @@ def run(args):
         tokens = tokens if len(tokens) else FULL
 
     assert len(tokens) == len(set(tokens))
+    tokenset = TokenSet(tokens)
 
     if args['--info']:
         radix = len(tokens)
@@ -318,10 +310,8 @@ def run(args):
     inputs = list(itertools.islice(source(generator), total))
     number = Number(radix, inputs)
 
-    if is_passphrase:
-        pw = Passphrase(WordSet(tokens), number)
-    else:
-        pw = Password(CharSet(tokens), number)
+    passtype = Passphrase if is_passphrase else Password
+    pw = passtype(tokenset, number)
 
     if args['--no-info']:
         if is_passphrase and pw.loose:
