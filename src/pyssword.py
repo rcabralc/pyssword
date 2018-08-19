@@ -109,7 +109,7 @@ Examples:
     By default, that is, without --no-info, additional information is shown:
 
         $ pyssword --entropy 30
-        Entropy: 32.772944258388186
+        Actual entropy: 32.772944258388186
         Set length: 94
         Password: h+!:4
 
@@ -125,7 +125,7 @@ Examples:
 
         $ pyssword passphrase --read --radix 6 --one-based --entropy 26
          1/11: 1 2 3 4 5 6 1 2 3 4 5
-        Entropy: 28.434587507932722
+        Actual entropy: 28.434587507932722
         Set length: 7776
         Password: abacus dispatch arousal
 
@@ -199,32 +199,23 @@ class IntOption:
         return self
 
 
-class TokenSet:
-    def __init__(self, tokens):
-        self._tokens = tokens
-        self._length = len(tokens)
+class Number:
+    def __init__(self, radix, digits):
+        assert radix > 1
+        for digit in digits:
+            assert 0 <= digit < radix
+        self._radix = radix
+        self._digits = digits
+        self.max_within_length = radix**len(digits)
+        self.bits = log(self.max_within_length, 2)
 
-    def __len__(self):
-        return self._length
-
-    def __iter__(self):
-        return iter(self._tokens)
-
-    def select(self, inputs, radix):
-        entropy = log(radix**len(inputs), 2)
-        minlength = ceil(entropy / log(self._length, 2))
-        result = [self._tokens[i] for i in self._convert(inputs, radix)]
-        padding = [self._tokens[0]] * max(minlength - len(result), 0)
-        return padding + result
-
-    def _convert(self, number, inradix):
-        outradix = self._length
+    def convert(self, radix):
         n = 0
         exp = 0
+        minlength = ceil(log(self.max_within_length, radix))
 
-        for digit in reversed(number):
-            assert 0 <= digit < inradix
-            n += digit * (inradix**exp)
+        for digit in reversed(self._digits):
+            n += digit * (self._radix**exp)
             exp += 1
 
         if n == 0:
@@ -232,41 +223,46 @@ class TokenSet:
         else:
             digits = []
             while n:
-                r = n % outradix
-                n = n // outradix
+                r = n % radix
+                n = n // radix
                 digits.append(r)
 
-        return reversed(digits)
+        padding = [0] * max(minlength - len(digits), 0)
+
+        return self.__class__(radix, padding + list(reversed(digits)))
+
+    def __iter__(self):
+        return iter(self._digits)
+
+
+class TokenSet(tuple):
+    @property
+    def bits(self):
+        return log(len(self), 2)
+
+    def select(self, number):
+        return [self[i] for i in number.convert(len(self))]
 
 
 class CharSet(TokenSet):
-    def __init__(self, tokens):
-        super(CharSet, self).__init__(tokens)
-
-        if self._length < 2:
+    def __new__(cls, tokens):
+        if len(tokens) < 2:
             error("Not enough characters to choose from.  Use a longer set.")
+        return TokenSet.__new__(cls, tokens)
 
 
 class WordSet(CharSet):
-    def __init__(self, tokens):
-        super(WordSet, self).__init__(tokens)
-
-        if self._length < 2:
+    def __new__(cls, tokens):
+        if len(tokens) < 2:
             error("Not enough words to choose from.  Use a longer set.")
-
-    def restrict(self, other_set):
-        return self.__class__([w for w in self._tokens if w not in other_set])
+        return CharSet.__new__(cls, tokens)
 
 
 class Password:
-    def __init__(self, desired_entropy, set, radix, source):
-        total = ceil(desired_entropy / log(radix, 2))
-        inputs = list(itertools.islice(source, total))
-
-        self.set = set
-        self.entropy = log(radix**len(inputs), 2)
-        self.inputs = inputs
-        self.value = set.select(inputs, radix)
+    def __init__(self, tokenset, number):
+        self.set = tokenset
+        self.entropy = number.bits
+        self.value = tokenset.select(number)
 
     def __iter__(self):
         return iter(self.value)
@@ -274,20 +270,14 @@ class Password:
     def __contains__(self, token):
         return token in self.value
 
-    @property
-    def loose_entropy(self):
-        pw = ''.join(self.value)
-        return log(len(set(pw))**len(pw), 2) if pw else 0
-
 
 class Passphrase(Password):
-    @classmethod
-    def empty(cls):
-        pw = cls.__new__(cls)
-        pw.entropy = 0
-        pw.inputs = []
-        pw.value = []
-        return pw
+    def __init__(self, tokenset, number):
+        super(Passphrase, self).__init__(tokenset, number)
+        pw = ''.join(self.value)
+        loose_entropy = log(len(set(pw))**len(pw), 2) if pw else 0
+        self.loose = loose_entropy < self.entropy
+        self.entropy = min(self.entropy, loose_entropy)
 
 
 def error(message):
@@ -301,17 +291,11 @@ def run(args):
     if is_passphrase:
         tokens = WORDS
     else:
-        lower = args['--lower']
-        upper = args['--upper']
-        numbers = args['--numbers']
-        symbols = args['--symbols']
-
         tokens = []
-
-        tokens.extend(lower and LOWER or [])
-        tokens.extend(upper and UPPER or [])
-        tokens.extend(numbers and NUMBERS or [])
-        tokens.extend(symbols and SYMBOLS or [])
+        tokens.extend(args['--lower'] and LOWER or [])
+        tokens.extend(args['--upper'] and UPPER or [])
+        tokens.extend(args['--numbers'] and NUMBERS or [])
+        tokens.extend(args['--symbols'] and SYMBOLS or [])
         tokens = tokens if len(tokens) else FULL
 
     assert len(tokens) == len(set(tokens))
@@ -330,26 +314,26 @@ def run(args):
             radix = len(tokens)
             generator = random_generator(rng, radix)
 
+    total = ceil(entropy / log(radix, 2))
+    inputs = list(itertools.islice(source(generator), total))
+    number = Number(radix, inputs)
+
     if is_passphrase:
-        wordset = WordSet(tokens)
-        inputs = []
-        pw = Passphrase.empty()
-
-        while pw.loose_entropy < entropy:
-            wordset = wordset.restrict(pw)
-            pw = Passphrase(entropy, wordset, radix, source(inputs, generator))
-            inputs = pw.inputs
-
+        pw = Passphrase(WordSet(tokens), number)
         sep = ' '
     else:
-        charset = CharSet(tokens)
-        pw = Password(entropy, charset, radix, source(generator))
+        pw = Password(CharSet(tokens), number)
         sep = ''
 
     if args['--no-info']:
+        if is_passphrase and pw.loose:
+            sys.stderr.write('Entropy below requirement.\n')
+            sys.stderr.write('Actual entropy: {}\n.'.format(pw.loose_entropy))
         print(sep.join(pw))
     else:
-        print("Entropy: {}\n"
+        if is_passphrase and pw.loose:
+            print('Entropy below requirement.')
+        print("Actual entropy: {}\n"
               "Set length: {}\n"
               "Password: {}"
               "".format(pw.entropy, len(pw.set), sep.join(pw)))
