@@ -264,11 +264,8 @@ class Password:
         self.entropy = number.bits
         self.value = tokenset.select(number)
 
-    def __iter__(self):
-        return iter(self.value)
-
-    def __contains__(self, token):
-        return token in self.value
+    def __str__(self):
+        return ''.join(self.value)
 
 
 class Passphrase(Password):
@@ -278,6 +275,9 @@ class Passphrase(Password):
         loose_entropy = log(len(set(pw))**len(pw), 2) if pw else 0
         self.loose = loose_entropy < self.entropy
         self.entropy = min(self.entropy, loose_entropy)
+
+    def __str__(self):
+        return ' '.join(self.value)
 
 
 def error(message):
@@ -320,23 +320,21 @@ def run(args):
 
     if is_passphrase:
         pw = Passphrase(WordSet(tokens), number)
-        sep = ' '
     else:
         pw = Password(CharSet(tokens), number)
-        sep = ''
 
     if args['--no-info']:
         if is_passphrase and pw.loose:
             sys.stderr.write('Entropy below requirement.\n')
             sys.stderr.write('Actual entropy: {}\n.'.format(pw.loose_entropy))
-        print(sep.join(pw))
+        print(pw)
     else:
         if is_passphrase and pw.loose:
             print('Entropy below requirement.')
         print("Actual entropy: {}\n"
               "Set length: {}\n"
               "Password: {}"
-              "".format(pw.entropy, len(pw.set), sep.join(pw)))
+              "".format(pw.entropy, len(pw.set), pw))
 
 
 def random_generator(rng, radix):
