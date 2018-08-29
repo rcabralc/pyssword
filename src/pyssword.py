@@ -9,10 +9,10 @@ sets.  Uses /dev/urandom for random info by default.
 Usage:
     pyssword [--lower --upper --numbers --symbols --entropy=bits --no-info]
     pyssword --read [--lower --upper --numbers --symbols --entropy=bits --no-info --radix=radix --one-based]
-    pyssword --paranoid=radix [--lower --upper --numbers --symbols --entropy=bits --no-info]
+    pyssword --dice=radix [--lower --upper --numbers --symbols --entropy=bits --no-info]
     pyssword passphrase [--entropy=bits --no-info]
     pyssword passphrase --read [--entropy=bits --no-info --radix=radix --one-based]
-    pyssword passphrase --paranoid=radix [--entropy=bits --no-info]
+    pyssword passphrase --dice=radix [--entropy=bits --no-info]
     pyssword passphrase --info
     pyssword --help
 
@@ -91,8 +91,9 @@ Options:
         Whether or not numbers are zero- or one- based.  They are assumed to be
         zero-based by default.
 
-    -p radix --paranoid=radix
-        Shortcut for `--read', `--radix=radix' and `--one-based'.
+    -d radix --dice=radix
+        Treat input as a dice with `radix' sides.  Shortcut for `--read',
+        `--radix=radix' and `--one-based'.
 
     -h --help
         Show this.
@@ -134,9 +135,9 @@ Examples:
         Set length: 7776
         Password: abacus dispatch arousal
 
-    The same as above, using the shortcut option --paranoid:
+    The same as above, using the shortcut option --dice:
 
-        $ pyssword passphrase --paranoid 6 --entropy 26
+        $ pyssword passphrase --dice 6 --entropy 26
          1/11: 1 2 3 4 5 6 1 2 3 4 5
         Actual entropy: 28.434587507932722
         Set length: 7776
@@ -147,7 +148,7 @@ Examples:
         $ cat - > /tmp/rolls
         1 2 3 4 5 6 1 2 3 4 5
         <Control-D>
-        $ cat /tmp/rolls | pyssword passphrase -p 6 -e 26 --no-info
+        $ cat /tmp/rolls | pyssword passphrase -d 6 -e 26 --no-info
         abacus dispatch arousal
         $ shred -u /tmp/rolls
 
@@ -305,9 +306,9 @@ def run(args):
     assert len(tokens) == len(set(tokens))
     tokenset = TokenSet(tokens)
 
-    if args['--paranoid']:
+    if args['--dice']:
         args['--read'] = True
-        args['--radix'] = args['--paranoid']
+        args['--radix'] = args['--dice']
         args['--one-based'] = True
 
     if args['--info']:
