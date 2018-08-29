@@ -396,7 +396,10 @@ def source(*inputs):
 
 
 def main():
-    return run(docopt.docopt(__doc__))
+    try:
+        return run(docopt.docopt(__doc__))
+    except KeyboardInterrupt:
+        return 1
 
 
 if __name__ == '__main__':
