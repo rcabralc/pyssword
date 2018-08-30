@@ -264,25 +264,14 @@ class TokenSet(tuple):
 
 
 class Password:
-    def __init__(self, tokenset, number):
+    def __init__(self, tokenset, number, separator):
         self.set = tokenset
         self.entropy = number.bits
         self.value = tokenset.select(number)
+        self.separator = separator
 
     def __str__(self):
-        return ''.join(self.value)
-
-
-class Passphrase(Password):
-    def __init__(self, tokenset, number):
-        super(Passphrase, self).__init__(tokenset, number)
-        pw = ''.join(self.value)
-        loose_entropy = log(len(set(pw))**len(pw), 2) if pw else 0
-        self.loose = loose_entropy < self.entropy
-        self.entropy = min(self.entropy, loose_entropy)
-
-    def __str__(self):
-        return ' '.join(self.value)
+        return self.separator.join(self.value)
 
 
 def error(message):
@@ -329,17 +318,11 @@ def run(args):
     inputs = list(itertools.islice(source(generator), total))
     number = Number(radix, inputs)
 
-    passtype = Passphrase if is_passphrase else Password
-    pw = passtype(tokenset, number)
+    pw = Password(tokenset, number, ' ' if is_passphrase else '')
 
     if args['--no-info']:
-        if is_passphrase and pw.loose:
-            sys.stderr.write('Entropy below requirement.\n')
-            sys.stderr.write('Actual entropy: {}\n.'.format(pw.loose_entropy))
         print(pw)
     else:
-        if is_passphrase and pw.loose:
-            print('Entropy below requirement.')
         print("Actual entropy: {}\n"
               "Set length: {}\n"
               "Password: {}"
