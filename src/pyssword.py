@@ -9,10 +9,10 @@ sets.  Uses /dev/urandom for random info by default.
 Usage:
     pyssword [--lower --upper --numbers --symbols --entropy=bits --no-info]
     pyssword --read [--lower --upper --numbers --symbols --entropy=bits --no-info --radix=radix --one-based]
-    pyssword --dice=radix [--lower --upper --numbers --symbols --entropy=bits --no-info]
+    pyssword --die=radix [--lower --upper --numbers --symbols --entropy=bits --no-info]
     pyssword passphrase [--entropy=bits --no-info]
     pyssword passphrase --read [--entropy=bits --no-info --radix=radix --one-based]
-    pyssword passphrase --dice=radix [--entropy=bits --no-info]
+    pyssword passphrase --die=radix [--entropy=bits --no-info]
     pyssword passphrase --info
     pyssword --help
 
@@ -64,9 +64,9 @@ Options:
         You can use any source of random data.  But keep in mind that in this
         case the strength of the generated password is entirely dependent on
         the random nature of the numbers provided.  The best way to do so is to
-        use real, fair dice or dices, and to actually throw them for getting
-        random input values.  Also, numbers are not assumed to be given in
-        base-10 by default (see `--radix').
+        use real, fair dice, and to actually throw them for getting random
+        input values.  Also, numbers are not assumed to be given in base-10 by
+        default (see `--radix').
 
         When connecting stdin to a pipe, there's the possibility of not enough
         numbers be provided, in which case the script will just block
@@ -91,8 +91,8 @@ Options:
         Whether or not numbers are zero- or one- based.  They are assumed to be
         zero-based by default.
 
-    -d radix --dice=radix
-        Treat input as a dice with `radix' sides.  Shortcut for `--read',
+    -d radix --die=radix
+        Treat input as a die with `radix' sides.  Shortcut for `--read',
         `--radix=radix' and `--one-based'.
 
     -h --help
@@ -127,7 +127,7 @@ Examples:
         $ dd if=/dev/random bs=16 count=1 2>/dev/null | od -t u1 -A n -v | pyssword --read --no-info
         )PN"GgyF%`#TdlI3IweV
 
-    Using a real dice with six sides for generating a 26-bit passphrase:
+    Using real dice with six sides for generating a 26-bit passphrase:
 
         $ pyssword passphrase --read --radix 6 --one-based --entropy 26
          1/11: 1 2 3 4 5 6 1 2 3 4 5
@@ -135,9 +135,9 @@ Examples:
         Set length: 7776
         Password: abacus dispatch arousal
 
-    The same as above, using the shortcut option --dice:
+    The same as above, using the shortcut option --die:
 
-        $ pyssword passphrase --dice 6 --entropy 26
+        $ pyssword passphrase --die 6 --entropy 26
          1/11: 1 2 3 4 5 6 1 2 3 4 5
         Actual entropy: 28.434587507932722
         Set length: 7776
@@ -155,7 +155,7 @@ Examples:
     Note: the three examples above returned three words, but the resulting
     entropy is not 38.8 (each word in Dicerware list provides about 12.9 bits,
     which is what you can get from a list with 7776 words).  This happens
-    because in order to get at least 26 bits of entropy eleven dice rolls are
+    because in order to get at least 26 bits of entropy eleven die rolls are
     needed, but then you'll get 28.4 bits.  This value exceeds the entropy
     provided by only two words (25.8 bits), and a third one is needed for
     accounting for the difference and also to satisfy the requirement of at
@@ -295,9 +295,9 @@ def run(args):
     assert len(tokens) == len(set(tokens))
     tokenset = TokenSet(tokens)
 
-    if args['--dice']:
+    if args['--die']:
         args['--read'] = True
-        args['--radix'] = args['--dice']
+        args['--radix'] = args['--die']
         args['--one-based'] = True
 
     if args['--info']:
